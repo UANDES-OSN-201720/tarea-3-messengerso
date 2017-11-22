@@ -9,16 +9,16 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters;
 using System.Runtime.Serialization.Formatters.Binary;
 
-namespace MessengerSO
+namespace MessengerClient
 {
     class Settings
     {
         const int VERSION = 1;
-        public static void Save(User user, string fileName)
+        public static void Save(Client user, string fileName)
         {
             Stream stream = null;
             try
-            {   
+            {
                 IFormatter formatter = new BinaryFormatter();
                 stream = new FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.None);
                 formatter.Serialize(stream, VERSION);
@@ -34,17 +34,17 @@ namespace MessengerSO
                     stream.Close();
             }
         }
-        public static User Load(string fileName)
+        public static Client Load(string fileName)
         {
             Stream stream = null;
-            User user = null;
+            Client user = null;
             try
             {
                 IFormatter formatter = new BinaryFormatter();
                 stream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.None);
                 int version = (int)formatter.Deserialize(stream);
                 Debug.Assert(version == VERSION);
-                user = (User)formatter.Deserialize(stream);
+                user = (Client)formatter.Deserialize(stream);
             }
             catch
             {

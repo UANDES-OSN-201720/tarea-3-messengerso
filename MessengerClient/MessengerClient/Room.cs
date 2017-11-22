@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MessengerSO
+namespace MessengerClient
 {
     class Room
     {
@@ -19,7 +19,7 @@ namespace MessengerSO
 
         public void Send_message(string message)
         {
-            foreach(Contact member in members)
+            foreach (Contact member in members)
             {
                 member.Send_message(message, 'g', id);
             }
