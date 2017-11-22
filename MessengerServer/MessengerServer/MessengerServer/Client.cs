@@ -18,3 +18,5 @@ namespace MessengerServer
         }
     }
 }
+
+//We are testing if gitignore works
