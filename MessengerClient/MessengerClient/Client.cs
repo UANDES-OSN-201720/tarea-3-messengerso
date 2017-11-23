@@ -15,6 +15,7 @@ namespace MessengerClient
         private string name;
         private List<Contact> contacts;
         public IPAddress IP;
+        private TcpClient client;
         [NonSerialized] private string state;
         [NonSerialized] private Room active_room;
         [NonSerialized] private int active_chat_IP;
@@ -24,6 +25,7 @@ namespace MessengerClient
             this.name = name;
             this.contacts = null;
             this.IP = IP;
+            this.client = new TcpClient();
         }
 
         private int Get_last_id()
@@ -68,9 +70,9 @@ namespace MessengerClient
             }
         }
 
-        public void Connect(IPAddress IP, Socket socket)
+        public void Connect(IPAddress server, Socket socket)
         {
-            //connect
+            client.Connect(server, 8000);
             state = "connected";
             Post_state();
         }

@@ -11,10 +11,12 @@ namespace MessengerServer
     class Client
     {
         IPAddress ip_address;
+        TcpClient client;
 
         public Client(IPAddress ip_address)
         {
             this.ip_address = ip_address;
+            this.client = new TcpClient();
         }
     }
 }
