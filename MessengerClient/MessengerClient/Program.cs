@@ -5,12 +5,13 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Net;
 using System.Net.Sockets;
+using System.IO;
 
 namespace MessengerClient
 {
     class Program
     {
-        private static Socket client_socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        private static TcpClient client_socket = new TcpClient();
 
         static void Main(string[] args)
         {
@@ -24,15 +25,14 @@ namespace MessengerClient
             while (true)
             {
                 Console.Write("Enter a request: ");
+                NetworkStream ns = client_socket.GetStream();
+                StreamWriter writer = new StreamWriter(ns);
                 string request = Console.ReadLine();
-                byte[] buffer = Encoding.UTF8.GetBytes(request);
-                client_socket.Send(buffer);
+                writer.WriteLine(request);
+                writer.Flush();
 
-                byte[] received_buff = new byte[1024];
-                int received = client_socket.Receive(received_buff);
-                byte[] data = new byte[received];
-                Array.Copy(received_buff, data, received);
-                Console.WriteLine("Received: " + Encoding.UTF8.GetString(data));
+                StreamReader reader = new StreamReader(ns);
+                Console.WriteLine("Recieved: " + reader.ReadLine());                
             }
         }
 
@@ -44,7 +44,7 @@ namespace MessengerClient
                 try
                 {
                     attempts++;
-                    client_socket.Connect(IPAddress.Loopback, 8000);
+                    client_socket.Connect(IPAddress.Any, 1260);
                 }
                 catch (SocketException)
                 {
