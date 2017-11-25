@@ -5,51 +5,57 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Net;
 using System.Net.Sockets;
+using System.IO;
+using System.Threading;
 
 namespace MessengerServer
 {
     class Program
     {
         private static byte[] buffer = new byte[1024];
-        private static List<Socket> client_sockets = new List<Socket>();
-        private static Socket server_socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        private static List<TcpClient> client_sockets = new List<TcpClient>();
+        private static TcpListener listener = new TcpListener(IPAddress.Parse("192.168.0.178") , 1260);
+        private static TcpClient t_client;
 
         static void Main(string[] args)
         {
             SetupServer();
-            Console.Title = "Whatsupp";
+            Console.Title = "Server";
+
+            Thread accept_thread = new Thread(new ThreadStart(LoopAcceptCallback));
+            accept_thread.Start();
+            Console.WriteLine("Recibiendo conecciones...");
+            
+            ReciveCallback(t_client);
             Console.ReadLine();
         }
 
         private static void SetupServer()
         {
             Console.WriteLine("Setting up server...");
-            server_socket.Bind(new IPEndPoint(IPAddress.Any, 8000));
-            server_socket.Listen(10);
-            server_socket.BeginAccept(new AsyncCallback(AcceptCallback), null);
+            listener.Start();
         }
 
-        private static void AcceptCallback(IAsyncResult AR)
+        private static void LoopAcceptCallback()
         {
-            Socket socket = server_socket.EndAccept(AR);
-            client_sockets.Add(socket);
-            Console.WriteLine("Client connected!");
-            socket.BeginReceive(buffer, 0, buffer.Length, SocketFlags.None, new AsyncCallback(ReciveCallback), socket);
-            server_socket.BeginAccept(new AsyncCallback(AcceptCallback), null);
+            while (true)
+            {
+                TcpClient tc = listener.AcceptTcpClient();
+                t_client = tc;
+                Console.WriteLine("Client connected!");
+            }
         }
 
-        private static void ReciveCallback(IAsyncResult AR)
+        private static void ReciveCallback(TcpClient tc)
         {
-            Socket socket = (Socket)AR.AsyncState;
-            int recived = socket.EndReceive(AR);
-            byte[] data_buff = new byte[recived];
-            Array.Copy(buffer, data_buff, recived);
+            NetworkStream ns = tc.GetStream();
+            StreamReader reader = new StreamReader(ns);
 
-            string text = Encoding.UTF8.GetString(data_buff);
-            Console.WriteLine("Text recived: " + text);
+            string message_client = reader.ReadLine();
+            Console.WriteLine("Client says: " + message_client);
 
             string response;
-            if (text.ToLower() == "get time")
+            if (message_client.ToLower() == "get time")
             {
                 response = DateTime.Now.ToLongTimeString();
             }
@@ -58,19 +64,9 @@ namespace MessengerServer
                 response = "Invalid request";
             }
 
-            byte[] data = Encoding.UTF8.GetBytes(response);
-            socket.BeginSend(data, 0, data.Length, SocketFlags.None, new AsyncCallback(SendCallback), socket);
-            socket.BeginReceive(buffer, 0, buffer.Length, SocketFlags.None, new AsyncCallback(ReciveCallback), socket);
-        }
-
-        private void SendMessage(string text)
-        {
-        }
-
-        private static void SendCallback(IAsyncResult AR)
-        {
-            Socket socket = (Socket)AR.AsyncState;
-            socket.EndSend(AR);
+            StreamWriter writer = new StreamWriter(ns);
+            writer.WriteLine(response);
+            writer.Flush();
         }
     }
 }
