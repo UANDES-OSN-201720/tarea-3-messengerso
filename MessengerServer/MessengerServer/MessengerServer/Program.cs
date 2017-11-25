@@ -21,7 +21,11 @@ namespace MessengerServer
         {
             SetupServer();
             Console.Title = "Server";
-            AcceptCallback();
+
+            Thread accept_thread = new Thread(new ThreadStart(LoopAcceptCallback));
+            accept_thread.Start();
+            Console.WriteLine("Recibiendo conecciones...");
+            
             ReciveCallback(t_client);
             Console.ReadLine();
         }
@@ -32,17 +36,21 @@ namespace MessengerServer
             listener.Start();
         }
 
-        private static void AcceptCallback()
+        private static void LoopAcceptCallback()
         {
-            TcpClient tc = listener.AcceptTcpClient();
-            t_client = tc;
-            Console.WriteLine("Client connected!");
+            while (true)
+            {
+                TcpClient tc = listener.AcceptTcpClient();
+                t_client = tc;
+                Console.WriteLine("Client connected!");
+            }
         }
 
         private static void ReciveCallback(TcpClient tc)
         {
             NetworkStream ns = tc.GetStream();
             StreamReader reader = new StreamReader(ns);
+
             string message_client = reader.ReadLine();
             Console.WriteLine("Client says: " + message_client);
 
