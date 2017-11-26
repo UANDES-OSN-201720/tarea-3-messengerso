@@ -39,17 +39,17 @@ namespace MessengerClient
             Console.ReadLine();
         }
         
-        private static void setname(StreamReader reader)
+        private static void Setname(StreamReader reader)
         {
-            if (reader.ToString() == "Accept")
+            if (reader.ToString().ToLower() == "accept")
             {
                 username = command.Remove(0, 8);
             }
             else Console.WriteLine("Could not change username: Request denied");
         }
-        private static void group(StreamReader reader)
+        private static void Group(StreamReader reader)
         {
-            if (reader.ToString() == "Accept")
+            if (reader.ToString().ToLower() == "accept")
             {
                 Console.WriteLine("You will be connected to public lobby, please wait");
                 Thread.Sleep(3000);
@@ -58,9 +58,9 @@ namespace MessengerClient
             }
             else Console.WriteLine("Could not connect to lobby: Request denied");
         }
-        private static void priv(StreamReader reader)
+        private static void Priv(StreamReader reader)
         {
-            if (reader.ToString() == "Accept")
+            if (reader.ToString().ToLower() == "accept")
             {
                 Console.WriteLine("You will be connected to " + command.Remove(0,2) + ", please wait");
                 Thread.Sleep(3000);
@@ -69,12 +69,13 @@ namespace MessengerClient
             }
             else Console.WriteLine("Could not connect to contact: Request denied");
         }
-        private static void exit(StreamReader reader)
+        private static void Exit(StreamReader reader)
         {
-            if (reader.ToString() == "Accept")
+            if (reader.ToString().ToLower() == "accept")
             {
                 Console.WriteLine("Exiting chat Window");
                 Thread.Sleep(3000);
+                Console.Clear();
                 Console.Title = "Whatsupp";
                 Console.WriteLine("List of commands, and what you can do with them:");
                 Console.WriteLine("/setname [username] : sets your username \n/tg : talk to group\n" +
@@ -82,6 +83,14 @@ namespace MessengerClient
                 Console.WriteLine("Welcome, " + username);
             }
             else Console.WriteLine("Could not exit: not connected to any lobby");
+        }
+        private static void ConToPriv(StreamReader reader)
+        {
+            Console.WriteLine("You will be connected to " + reader.ToString().Remove(0, 10));
+            Thread.Sleep(3000);
+            Console.Clear();
+            Console.Title = reader.ToString().Remove(0, 10);
+
         }
 
         private static void SendLoop()
@@ -102,10 +111,11 @@ namespace MessengerClient
                 try
                 {
                     reader = new StreamReader(ns);
-                    if (ReferenceEquals(command.Substring(0, 7), "/setname")) setname(reader);
-                    else if (ReferenceEquals(command, "/tg")) group(reader);
-                    else if (ReferenceEquals(command.Substring(0, 1), "/t")) priv(reader);
-                    else if (ReferenceEquals(command, "/exit")) exit(reader);
+                    if (ReferenceEquals(command.Substring(0, 7), "/setname")) Setname(reader);
+                    else if (ReferenceEquals(command, "/tg")) Group(reader);
+                    else if (ReferenceEquals(command.Substring(0, 1), "/t")) Priv(reader);
+                    else if (ReferenceEquals(command, "/exit")) Exit(reader);
+                    else if (ReferenceEquals(reader.ToString().ToLower().Substring(0, 10), "in private:")) ConToPriv(reader);
                     else Console.WriteLine(reader.ReadLine());
                 }
                 catch { }
