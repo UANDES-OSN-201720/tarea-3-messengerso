@@ -12,10 +12,10 @@ namespace MessengerServer
 {
     class Program
     {
+        private static int c_number = 1;
         private static byte[] buffer = new byte[1024];
-        private static List<TcpClient> client_sockets = new List<TcpClient>();
+        private static List<Client> clients = new List<Client>();
         private static TcpListener listener = new TcpListener(IPAddress.Parse("192.168.0.178") , 1260);
-        private static TcpClient t_client;
 
         static void Main(string[] args)
         {
@@ -26,7 +26,6 @@ namespace MessengerServer
             accept_thread.Start();
             Console.WriteLine("Recibiendo conecciones...");
             
-            ReciveCallback(t_client);
             Console.ReadLine();
         }
 
@@ -34,6 +33,7 @@ namespace MessengerServer
         {
             Console.WriteLine("Setting up server...");
             listener.Start();
+            Console.WriteLine("Server set up!");
         }
 
         private static void LoopAcceptCallback()
@@ -41,32 +41,55 @@ namespace MessengerServer
             while (true)
             {
                 TcpClient tc = listener.AcceptTcpClient();
-                t_client = tc;
+                InitializeClient(tc);
                 Console.WriteLine("Client connected!");
+
+                NetworkStream ns = tc.GetStream();
+                StreamWriter writer = new StreamWriter(ns);
+                writer.WriteLine("Guest_" + c_number.ToString());
+                writer.Flush();
+                c_number++;
             }
         }
 
-        private static void ReciveCallback(TcpClient tc)
+        private static void InitializeClient(TcpClient tc)
         {
-            NetworkStream ns = tc.GetStream();
+            Client client = new Client(tc);
+            clients.Add(client);
+            client.listen = new Thread(new ParameterizedThreadStart(LoopReceiveCallback));
+            client.listen.Start(tc);
+        }
+
+        private static void LoopReceiveCallback(object tc)
+        {
+            TcpClient tcl = (TcpClient)tc;
+            NetworkStream ns = tcl.GetStream();
             StreamReader reader = new StreamReader(ns);
-
-            string message_client = reader.ReadLine();
-            Console.WriteLine("Client says: " + message_client);
-
-            string response;
-            if (message_client.ToLower() == "get time")
+            while (true)
             {
-                response = DateTime.Now.ToLongTimeString();
-            }
-            else
-            {
-                response = "Invalid request";
-            }
+                try
+                {
+                    string message_client = reader.ReadLine();
+                    Console.WriteLine("Client says: " + message_client);
 
-            StreamWriter writer = new StreamWriter(ns);
-            writer.WriteLine(response);
-            writer.Flush();
+                    string response;
+                    if (message_client.ToLower() == "get time")
+                    {
+                        response = DateTime.Now.ToLongTimeString();
+                    }
+                    else
+                    {
+                        response = "Invalid request";
+                    }
+
+                    StreamWriter writer = new StreamWriter(ns);
+                    writer.WriteLine(response);
+                    writer.Flush();
+                }
+                catch (Exception)
+                {
+                }
+            }
         }
     }
 }

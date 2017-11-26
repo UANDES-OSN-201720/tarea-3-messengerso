@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Threading;
 using System.Net;
 using System.Net.Sockets;
 
@@ -10,13 +11,12 @@ namespace MessengerServer
 {
     class Client
     {
-        IPAddress ip_address;
+        public Thread listen;
         TcpClient client;
 
-        public Client(IPAddress ip_address)
+        public Client(TcpClient tc)
         {
-            this.ip_address = ip_address;
-            this.client = new TcpClient();
+            this.client = tc;
         }
     }
 }
