@@ -15,7 +15,6 @@ namespace MessengerServer
         private static int c_number = 1;
         private static byte[] buffer = new byte[1024];
         private static List<Client> clients = new List<Client>();
-        private static List<Client> group_chat = new List<Client>();
         private static TcpListener listener = new TcpListener(IPAddress.Loopback/*Parse("192.168.50.18")*/ , 1260);
 
         static void Main(string[] args)
@@ -91,7 +90,6 @@ namespace MessengerServer
                         if (first_word.ToLower() == "/tg" && !tcp_client.in_group && !tcp_client.in_private)
                         {
                             tcp_client.in_group = true;
-                            group_chat.Add(tcp_client);
                             response = "accept";
                         }
                         else if (first_word.ToLower() == "/t" && !tcp_client.in_group && !tcp_client.in_private)
@@ -115,7 +113,6 @@ namespace MessengerServer
                         else if (first_word.ToLower() == "/exit" && tcp_client.in_group)
                         {
                             tcp_client.in_group = false;
-                            group_chat.Remove(tcp_client);
                             response = "accept";
                         }
                         else if (first_word.ToLower() == "/exit" && tcp_client.in_private)
@@ -147,7 +144,6 @@ namespace MessengerServer
                                     if (character == ' ')
                                     {
                                         found_space = true;
-                                        Console.WriteLine("HOLAAA");
                                     }
                                 }
                                 bool username_exists = false;
@@ -180,7 +176,6 @@ namespace MessengerServer
                             response = "Invalid request";
                         }
                         fails = 0;
-                        Console.WriteLine(fails.ToString());
 
                         StreamWriter writer = new StreamWriter(ns);
                         writer.WriteLine(response);
@@ -190,7 +185,6 @@ namespace MessengerServer
                     {
                         response = "decline";
                         fails = 0;
-                        Console.WriteLine(fails.ToString());
 
                         StreamWriter writer = new StreamWriter(ns);
                         writer.WriteLine(response);
@@ -203,7 +197,6 @@ namespace MessengerServer
                     if (fails > 3)
                     {
                         clients.Remove(tcp_client);
-                        if (tcp_client.in_group) group_chat.Remove(tcp_client);
                         if (tcp_client.in_private)
                         {
                             try
@@ -236,9 +229,13 @@ namespace MessengerServer
 
         private static void SendMessageToGroup(string message, Client sender)
         {
-            foreach(Client client in group_chat)
+            foreach(Client client in clients)
             {
-                if(!(client.username == sender.username)) client.SendMessage(message);
+                Console.WriteLine(client.in_group.ToString());
+                if (client.username != sender.username && client.in_group)
+                {
+                    client.SendMessage(message);
+                }
             }
         }
     }
