@@ -16,7 +16,7 @@ namespace MessengerServer
         private static byte[] buffer = new byte[1024];
         private static List<Client> clients = new List<Client>();
         private static List<Client> group_chat = new List<Client>();
-        private static TcpListener listener = new TcpListener(IPAddress.Parse("192.168.0.178") , 1260);
+        private static TcpListener listener = new TcpListener(IPAddress.Loopback/*Parse("192.168.50.18")*/ , 1260);
 
         static void Main(string[] args)
         {
@@ -92,13 +92,13 @@ namespace MessengerServer
                         {
                             tcp_client.in_group = true;
                             group_chat.Add(tcp_client);
-                            response = "Accept";
+                            response = "accept";
                         }
                         else if (first_word.ToLower() == "/t" && !tcp_client.in_group && !tcp_client.in_private)
                         {
                             string second_word = message_client.Remove(0, 3);
                             Client listener_client = FindClientByUsername(second_word);
-                            if (listener_client is null) response = "Decline";
+                            if (listener_client is null) response = "decline";
                             else
                             {
                                 if (!listener_client.in_private && !listener_client.in_group)
@@ -107,16 +107,16 @@ namespace MessengerServer
                                     listener_client.in_private = true;
                                     listener_client.private_username = tcp_client.username;
                                     tcp_client.private_username = listener_client.username;
-                                    response = "Accept";
+                                    response = "accept";
                                 }
-                                else response = "Decline";
+                                else response = "decline";
                             }
                         }
                         else if (first_word.ToLower() == "/exit" && tcp_client.in_group)
                         {
                             tcp_client.in_group = false;
                             group_chat.Remove(tcp_client);
-                            response = "Accept";
+                            response = "accept";
                         }
                         else if (first_word.ToLower() == "/exit" && tcp_client.in_private)
                         {
@@ -124,7 +124,7 @@ namespace MessengerServer
                             Client listener_client = FindClientByUsername(tcp_client.private_username);
                             listener_client.private_username = "";
                             tcp_client.private_username = "";
-                            response = "Accept";
+                            response = "accept";
                         }
                         else if (first_word.ToLower() == "/setname")
                         {
@@ -142,7 +142,6 @@ namespace MessengerServer
                             }
                             if (found_name)
                             {
-                                Console.WriteLine("asdf" + second_word + "asdf");
                                 foreach (char character in second_word)
                                 {
                                     if (character == ' ')
@@ -156,25 +155,25 @@ namespace MessengerServer
                                 {
                                     if (person.username == second_word) username_exists = true;
                                 }
-                                response = "Decline";
+                                response = "decline";
                                 if (!found_space && !username_exists)
                                 {
                                     tcp_client.username = second_word;
-                                    response = "Accept";
+                                    response = "accept";
                                 }
                             }
-                            else response = "Decline";
+                            else response = "decline";
                         }
                         else if (tcp_client.in_private)
                         {
                             Client listener_client = FindClientByUsername(tcp_client.private_username);
                             listener_client.SendMessage("[" + tcp_client.username + "]: " + message_client);
-                            response = "Accept";
+                            response = "accept";
                         }
                         else if (tcp_client.in_group)
                         {
                             SendMessageToGroup("[" + tcp_client.username + "]: " + message_client, tcp_client);
-                            response = "Accept";
+                            response = "accept";
                         }
                         else
                         {
@@ -189,7 +188,7 @@ namespace MessengerServer
                     }
                     else if (message_client.Length < 0)
                     {
-                        response = "Decline";
+                        response = "decline";
                         fails = 0;
                         Console.WriteLine(fails.ToString());
 
@@ -201,7 +200,6 @@ namespace MessengerServer
                 catch (Exception)
                 {
                     fails++;
-                    Console.WriteLine("nada "+ fails.ToString());
                     if (fails > 3)
                     {
                         clients.Remove(tcp_client);
