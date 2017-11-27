@@ -15,6 +15,7 @@ namespace MessengerServer
         private static int c_number = 1;
         private static byte[] buffer = new byte[1024];
         private static List<Client> clients = new List<Client>();
+        private static List<Client> group_chat = new List<Client>();
         private static TcpListener listener = new TcpListener(IPAddress.Parse("192.168.0.178") , 1260);
 
         static void Main(string[] args)
@@ -41,41 +42,108 @@ namespace MessengerServer
             while (true)
             {
                 TcpClient tc = listener.AcceptTcpClient();
-                InitializeClient(tc);
-                Console.WriteLine("Client connected!");
+                string username = "Guest_" + c_number.ToString();
+                c_number++;
+                InitializeClient(tc, username);
+                Console.WriteLine(username + " connected!");
 
                 NetworkStream ns = tc.GetStream();
                 StreamWriter writer = new StreamWriter(ns);
-                writer.WriteLine("Guest_" + c_number.ToString());
+                writer.WriteLine(username);
                 writer.Flush();
-                c_number++;
             }
         }
 
-        private static void InitializeClient(TcpClient tc)
+        private static void InitializeClient(TcpClient tc, string username)
         {
-            Client client = new Client(tc);
+            Client client = new Client(tc, username);
             clients.Add(client);
             client.listen = new Thread(new ParameterizedThreadStart(LoopReceiveCallback));
-            client.listen.Start(tc);
+            client.listen.Start(client);
         }
 
-        private static void LoopReceiveCallback(object tc)
+        private static void LoopReceiveCallback(object client)
         {
-            TcpClient tcl = (TcpClient)tc;
-            NetworkStream ns = tcl.GetStream();
+            Client tcp_client = (Client)client;
+            NetworkStream ns = tcp_client.client.GetStream();
             StreamReader reader = new StreamReader(ns);
             while (true)
             {
                 try
                 {
                     string message_client = reader.ReadLine();
-                    Console.WriteLine("Client says: " + message_client);
+                    Console.WriteLine("[" + tcp_client.username + "]" + message_client);
 
                     string response;
-                    if (message_client.ToLower() == "get time")
+                    string first_word = message_client.ToLower().Substring(0, message_client.IndexOf(" "));
+                    if (first_word.ToLower() == "/tg" && !tcp_client.in_group && !tcp_client.in_private)
                     {
-                        response = DateTime.Now.ToLongTimeString();
+                        tcp_client.in_group = true;
+                        group_chat.Add(tcp_client);
+                        response = "Accept";
+                    }
+                    else if (first_word.ToLower() == "/t" && !tcp_client.in_group && !tcp_client.in_private)
+                    {
+                        string second_word = message_client.Substring(message_client.IndexOf(" "), -1);
+                        Client listener_client = FindClientByUsername(second_word);
+                        if (listener_client is null) response = "Decline";
+                        else
+                        {
+                            if (!listener_client.in_private && !listener_client.in_group)
+                            {
+                                listener_client.SendMessage("in private:" + tcp_client.username);
+                                listener_client.in_private = true;
+                                listener_client.private_username = tcp_client.username;
+                                tcp_client.private_username = listener_client.username;
+                                response = "Accept";
+                            }
+                            else response = "Decline";
+                        }
+                    }
+                    else if (first_word.ToLower() == "/exit" && tcp_client.in_group)
+                    {
+                        tcp_client.in_group = false;
+                        group_chat.Remove(tcp_client);
+                        response = "Accept";
+                    }
+                    else if(first_word.ToLower() == "/exit" && tcp_client.in_private)
+                    {
+                        tcp_client.in_private = false;
+                        Client listener_client = FindClientByUsername(tcp_client.private_username);
+                        listener_client.private_username = "";
+                        tcp_client.private_username = "";
+                        response = "Accept";
+                    }
+                    else if (first_word.ToLower() == "/setname")
+                    {
+                        bool found_space = false;
+                        string second_word = message_client.Substring(message_client.IndexOf(" "), -1);
+                        foreach(char character in second_word)
+                        {
+                            if (character == ' ') found_space = true;
+                        }
+                        bool username_exists = false;
+                        foreach(Client person in clients)
+                        {
+                            if (person.username == second_word) username_exists = true;
+                        }
+                        response = "Decline";
+                        if (!found_space && !username_exists)
+                        {
+                            tcp_client.username = second_word;
+                            response = "Accept";
+                        }
+                    }
+                    else if (tcp_client.in_private)
+                    {
+                        Client listener_client = FindClientByUsername(tcp_client.private_username);
+                        listener_client.SendMessage("["+tcp_client.username+"]: "+message_client);
+                        response = "Accept";
+                    }
+                    else if (tcp_client.in_group)
+                    {
+                        SendMessageToGroup("[" + tcp_client.username + "]: " + message_client, tcp_client);
+                        response = "Accept";
                     }
                     else
                     {
@@ -86,9 +154,30 @@ namespace MessengerServer
                     writer.WriteLine(response);
                     writer.Flush();
                 }
+                catch (EndOfStreamException)
+                {
+                    Console.WriteLine("EOS");
+                }
                 catch (Exception)
                 {
                 }
+            }
+        }
+
+        private static Client FindClientByUsername(string username)
+        {
+            foreach (Client client in clients)
+            {
+                if (client.username == username) return client;
+            }
+            return null;
+        }
+
+        private static void SendMessageToGroup(string message, Client sender)
+        {
+            foreach(Client client in group_chat)
+            {
+                if(!(client.username == sender.username)) client.SendMessage(message);
             }
         }
     }
