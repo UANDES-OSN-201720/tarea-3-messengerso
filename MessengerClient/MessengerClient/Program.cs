@@ -36,20 +36,19 @@ namespace MessengerClient
             Console.WriteLine("Welcome, " + username);
             send.Start();
             listen.Start();
-            Console.ReadLine();
         }
         
         private static void Setname(StreamReader reader)
         {
-            if (reader.ToString().ToLower() == "accept")
+            if (reader.ReadLine().ToLower() == "accept")
             {
-                username = command.Remove(0, 8);
+                username = command.Remove(0, 9);
             }
             else Console.WriteLine("Could not change username: Request denied");
         }
         private static void Group(StreamReader reader)
         {
-            if (reader.ToString().ToLower() == "accept")
+            if (reader.ReadLine().ToLower() == "accept")
             {
                 Console.WriteLine("You will be connected to public lobby, please wait");
                 Thread.Sleep(3000);
@@ -60,7 +59,7 @@ namespace MessengerClient
         }
         private static void Priv(StreamReader reader)
         {
-            if (reader.ToString().ToLower() == "accept")
+            if (reader.ReadLine().ToLower() == "accept")
             {
                 Console.WriteLine("You will be connected to " + command.Remove(0,2) + ", please wait");
                 Thread.Sleep(3000);
@@ -71,7 +70,7 @@ namespace MessengerClient
         }
         private static void Exit(StreamReader reader)
         {
-            if (reader.ToString().ToLower() == "accept")
+            if (reader.ReadLine().ToLower() == "accept")
             {
                 Console.WriteLine("Exiting chat Window");
                 Thread.Sleep(3000);
@@ -111,12 +110,14 @@ namespace MessengerClient
                 try
                 {
                     reader = new StreamReader(ns);
-                    if (ReferenceEquals(command.Substring(0, 7), "/setname")) Setname(reader);
-                    else if (ReferenceEquals(command, "/tg")) Group(reader);
-                    else if (ReferenceEquals(command.Substring(0, 1), "/t")) Priv(reader);
-                    else if (ReferenceEquals(command, "/exit")) Exit(reader);
-                    else if (ReferenceEquals(reader.ToString().ToLower().Substring(0, 10), "in private:")) ConToPriv(reader);
-                    else Console.WriteLine(reader.ReadLine());
+                    if (command.Substring(0, 8) == "/setname") { Console.WriteLine("Works name!"); Setname(reader); }
+                    else if (command == "/tg") { Console.WriteLine("Works group!"); Group(reader); }
+                    else if (command.Substring(0, 2) == "/t")
+                    { Console.WriteLine("Works priv!"); Priv(reader); }
+                    else if (command == "/exit")
+                    { Console.WriteLine("Works exit!"); Exit(reader); }
+                    else if (reader.ReadLine().ToLower().Substring(0, 11) == "in private:") ConToPriv(reader);
+                    else Console.WriteLine("nada funciono..." + reader.ReadLine());
                 }
                 catch { }
             }
@@ -130,7 +131,7 @@ namespace MessengerClient
                 try
                 {
                     attempts++;
-                    tcpClient.Connect("192.168.0.178", 1260);
+                    tcpClient.Connect(IPAddress.Loopback/*"192.168.0.178"*/, 1260);
                 }
                 catch (SocketException)
                 {
