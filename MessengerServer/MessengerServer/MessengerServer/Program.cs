@@ -67,99 +67,162 @@ namespace MessengerServer
             Client tcp_client = (Client)client;
             NetworkStream ns = tcp_client.client.GetStream();
             StreamReader reader = new StreamReader(ns);
+            int fails = 0;
             while (true)
             {
                 try
                 {
                     string message_client = reader.ReadLine();
-                    Console.WriteLine("[" + tcp_client.username + "]" + message_client);
+                    Console.WriteLine("[" + tcp_client.username + "] " + message_client);
 
                     string response;
-                    string first_word = message_client.ToLower().Substring(0, message_client.IndexOf(" "));
-                    if (first_word.ToLower() == "/tg" && !tcp_client.in_group && !tcp_client.in_private)
+                    if (message_client.Length > 0)
                     {
-                        tcp_client.in_group = true;
-                        group_chat.Add(tcp_client);
-                        response = "Accept";
-                    }
-                    else if (first_word.ToLower() == "/t" && !tcp_client.in_group && !tcp_client.in_private)
-                    {
-                        string second_word = message_client.Substring(message_client.IndexOf(" "), -1);
-                        Client listener_client = FindClientByUsername(second_word);
-                        if (listener_client is null) response = "Decline";
-                        else
+                        string first_word;
+                        try
                         {
-                            if (!listener_client.in_private && !listener_client.in_group)
+                            first_word = message_client.ToLower().Substring(0, message_client.IndexOf(" "));
+                        }
+                        catch (Exception)
+                        {
+                            first_word = message_client;
+                        }
+
+                        if (first_word.ToLower() == "/tg" && !tcp_client.in_group && !tcp_client.in_private)
+                        {
+                            tcp_client.in_group = true;
+                            group_chat.Add(tcp_client);
+                            response = "Accept";
+                        }
+                        else if (first_word.ToLower() == "/t" && !tcp_client.in_group && !tcp_client.in_private)
+                        {
+                            string second_word = message_client.Remove(0, 3);
+                            Client listener_client = FindClientByUsername(second_word);
+                            if (listener_client is null) response = "Decline";
+                            else
                             {
-                                listener_client.SendMessage("in private:" + tcp_client.username);
-                                listener_client.in_private = true;
-                                listener_client.private_username = tcp_client.username;
-                                tcp_client.private_username = listener_client.username;
-                                response = "Accept";
+                                if (!listener_client.in_private && !listener_client.in_group)
+                                {
+                                    listener_client.SendMessage("in private:" + tcp_client.username);
+                                    listener_client.in_private = true;
+                                    listener_client.private_username = tcp_client.username;
+                                    tcp_client.private_username = listener_client.username;
+                                    response = "Accept";
+                                }
+                                else response = "Decline";
+                            }
+                        }
+                        else if (first_word.ToLower() == "/exit" && tcp_client.in_group)
+                        {
+                            tcp_client.in_group = false;
+                            group_chat.Remove(tcp_client);
+                            response = "Accept";
+                        }
+                        else if (first_word.ToLower() == "/exit" && tcp_client.in_private)
+                        {
+                            tcp_client.in_private = false;
+                            Client listener_client = FindClientByUsername(tcp_client.private_username);
+                            listener_client.private_username = "";
+                            tcp_client.private_username = "";
+                            response = "Accept";
+                        }
+                        else if (first_word.ToLower() == "/setname")
+                        {
+                            bool found_space = false;
+                            bool found_name = true;
+                            string second_word;
+                            try
+                            {
+                                second_word = message_client.Remove(0, 9);
+                            }
+                            catch (Exception)
+                            {
+                                second_word = "";
+                                found_name = false;
+                            }
+                            if (found_name)
+                            {
+                                Console.WriteLine("asdf" + second_word + "asdf");
+                                foreach (char character in second_word)
+                                {
+                                    if (character == ' ')
+                                    {
+                                        found_space = true;
+                                        Console.WriteLine("HOLAAA");
+                                    }
+                                }
+                                bool username_exists = false;
+                                foreach (Client person in clients)
+                                {
+                                    if (person.username == second_word) username_exists = true;
+                                }
+                                response = "Decline";
+                                if (!found_space && !username_exists)
+                                {
+                                    tcp_client.username = second_word;
+                                    response = "Accept";
+                                }
                             }
                             else response = "Decline";
                         }
-                    }
-                    else if (first_word.ToLower() == "/exit" && tcp_client.in_group)
-                    {
-                        tcp_client.in_group = false;
-                        group_chat.Remove(tcp_client);
-                        response = "Accept";
-                    }
-                    else if(first_word.ToLower() == "/exit" && tcp_client.in_private)
-                    {
-                        tcp_client.in_private = false;
-                        Client listener_client = FindClientByUsername(tcp_client.private_username);
-                        listener_client.private_username = "";
-                        tcp_client.private_username = "";
-                        response = "Accept";
-                    }
-                    else if (first_word.ToLower() == "/setname")
-                    {
-                        bool found_space = false;
-                        string second_word = message_client.Substring(message_client.IndexOf(" "), -1);
-                        foreach(char character in second_word)
+                        else if (tcp_client.in_private)
                         {
-                            if (character == ' ') found_space = true;
-                        }
-                        bool username_exists = false;
-                        foreach(Client person in clients)
-                        {
-                            if (person.username == second_word) username_exists = true;
-                        }
-                        response = "Decline";
-                        if (!found_space && !username_exists)
-                        {
-                            tcp_client.username = second_word;
+                            Client listener_client = FindClientByUsername(tcp_client.private_username);
+                            listener_client.SendMessage("[" + tcp_client.username + "]: " + message_client);
                             response = "Accept";
                         }
-                    }
-                    else if (tcp_client.in_private)
-                    {
-                        Client listener_client = FindClientByUsername(tcp_client.private_username);
-                        listener_client.SendMessage("["+tcp_client.username+"]: "+message_client);
-                        response = "Accept";
-                    }
-                    else if (tcp_client.in_group)
-                    {
-                        SendMessageToGroup("[" + tcp_client.username + "]: " + message_client, tcp_client);
-                        response = "Accept";
-                    }
-                    else
-                    {
-                        response = "Invalid request";
-                    }
+                        else if (tcp_client.in_group)
+                        {
+                            SendMessageToGroup("[" + tcp_client.username + "]: " + message_client, tcp_client);
+                            response = "Accept";
+                        }
+                        else
+                        {
+                            response = "Invalid request";
+                        }
+                        fails = 0;
+                        Console.WriteLine(fails.ToString());
 
-                    StreamWriter writer = new StreamWriter(ns);
-                    writer.WriteLine(response);
-                    writer.Flush();
-                }
-                catch (EndOfStreamException)
-                {
-                    Console.WriteLine("EOS");
+                        StreamWriter writer = new StreamWriter(ns);
+                        writer.WriteLine(response);
+                        writer.Flush();
+                    }
+                    else if (message_client.Length < 0)
+                    {
+                        response = "Decline";
+                        fails = 0;
+                        Console.WriteLine(fails.ToString());
+
+                        StreamWriter writer = new StreamWriter(ns);
+                        writer.WriteLine(response);
+                        writer.Flush();
+                    }
                 }
                 catch (Exception)
                 {
+                    fails++;
+                    Console.WriteLine("nada "+ fails.ToString());
+                    if (fails > 3)
+                    {
+                        clients.Remove(tcp_client);
+                        if (tcp_client.in_group) group_chat.Remove(tcp_client);
+                        if (tcp_client.in_private)
+                        {
+                            try
+                            {
+                                Client private_mate = FindClientByUsername(tcp_client.private_username);
+                                private_mate.private_username = "";
+                                private_mate.SendMessage(tcp_client.username + " Disconnected!");
+                                private_mate.in_private = false;
+                            }
+                            catch (Exception)
+                            {
+                            }
+                        }
+                        Console.WriteLine(tcp_client.username + " Disconnected");
+                        tcp_client.client.Close();
+                        break;
+                    }
                 }
             }
         }
